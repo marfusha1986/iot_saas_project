@@ -1,0 +1,12 @@
+# Python & Sanal Ortam
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# IDE ve Yapılandırma Dosyaları
+.idea/
+.vscode/
+
+# Hassas Bilgiler ve Çevre Değişkenleri
+.env
