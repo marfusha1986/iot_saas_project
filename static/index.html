@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Keystroke Dynamics Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { padding: 10px; font-size: 16px; width: 300px; margin-right: 10px; }
+        button { padding: 10px 15px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #eee; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>1. Baseline Kayıt (Örnek Parola Yazma)</h3>
+        <input type="number" id="regUserId" placeholder="User ID (örn: 125695)">
+        <input type="password" id="regInput" placeholder="Şifrenizi yazın ve Kaydet'e basın">
+        <button onclick="registerBaseline()">Baseline Kaydet</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Doğrulama (Test Etme)</h3>
+        <input type="number" id="valUserId" placeholder="User ID (örn: 125695)">
+        <input type="password" id="valInput" placeholder="Şifrenizi tekrar yazın">
+        <button onclick="validateKeystroke()">Doğrula</button>
+    </div>
+
+    <div class="card">
+        <h3>Sonuç:</h3>
+        <pre id="output">İşlem bekleniyor...</pre>
+    </div>
+
+    <script>
+        let keyDownTimes = {};
+        let intervals = [];
+
+
+        // Tuşa basıldığında zamanı kaydet
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.type === 'password') {
+                if (!keyDownTimes[e.key]) {
+                    keyDownTimes[e.key] = performance.now();
+                }
+            }
+        });
+
+        // Tuş bırakıldığında iki tuş/süre arasındaki farkı hesapla
+        document.addEventListener('keyup', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.type === 'password') {
+                if (keyDownTimes[e.key]) {
+                    let duration = performance.now() - keyDownTimes[e.key];
+                    intervals.push(Math.round(duration));
+                    delete keyDownTimes[e.key];
+                }
+            }
+        });
+
+        async function registerBaseline() {
+            const userId = parseInt(document.getElementById('regUserId').value);
+            if (!userId || intervals.length === 0) {
+                alert("Lütfen User ID girin ve şifre alanına bir şeyler yazın!");
+                return;
+            }
+
+            const response = await fetch('http://127.0.0.1:8000/api/v1/register/baseline', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, baseline_vector: intervals })
+            });
+            const result = await response.json();
+            document.getElementById('output').innerText = JSON.stringify(result, null, 2);
+            intervals = []; // Sıfırla
+            document.getElementById('regInput').value = '';
+        }
+
+        async function validateKeystroke() {
+            const userId = parseInt(document.getElementById('valUserId').value);
+            if (!userId || intervals.length === 0) {
+                alert("Lütfen User ID girin ve şifre alanına şifrenizi yazın!");
+                return;
+            }
+
+            const response = await fetch('http://127.0.0.1:8000/api/v1/validate/keystroke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, current_times: intervals })
+            });
+            const result = await response.json();
+            document.getElementById('output').innerText = JSON.stringify(result, null, 2);
+            intervals = []; // Sıfırla
+            document.getElementById('valInput').value = '';
+        }
+    </script>
+</body>
+</html>
